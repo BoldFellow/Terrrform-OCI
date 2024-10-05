@@ -1,0 +1,135 @@
+# 1. count
+# Use cases: 
+# - Creating multiple similar resources
+# - Conditionally creating resources
+# Benefits:
+# - Simplifies creation of multiple identical resources
+# - Allows for dynamic resource creation based on variables
+resource "aws_instance" "server" {
+  count         = 3
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "Server ${count.index + 1}"
+  }
+}
+
+# 2. for_each
+# Use cases:
+# - Creating multiple resources with unique configurations
+# - Iterating over maps or sets to create resources
+# Benefits:
+# - More flexible than count for non-identical resources
+# - Easier to manage resources individually
+resource "aws_iam_user" "example" {
+  for_each = toset(["user1", "user2", "user3"])
+  name     = each.key
+}
+
+# 3. depends_on
+# Use cases:
+# - Specifying explicit dependencies between resources
+# - Ensuring proper order of resource creation/deletion
+# Benefits:
+# - Helps manage complex dependencies
+# - Useful when Terraform can't automatically infer dependencies
+resource "aws_s3_bucket" "example" {
+  bucket = "my-bucket"
+}
+
+resource "aws_iam_role" "example" {
+  name = "example-role"
+  # Role configuration...
+
+  depends_on = [aws_s3_bucket.example]
+}
+
+# 4. lifecycle
+# Use cases:
+# - Customizing resource lifecycle behavior
+# - Preventing accidental resource deletion
+# Benefits:
+# - Provides fine-grained control over resource management
+# - Helps prevent unintended consequences during updates
+resource "aws_instance" "example" {
+  # ... other configuration ...
+
+  lifecycle {
+    create_before_destroy = true
+    prevent_destroy       = true
+    ignore_changes        = [tags]
+  }
+}
+
+# 5. provider
+# Use cases:
+# - Using multiple provider configurations
+# - Specifying a non-default provider for a resource
+# Benefits:
+# - Allows management of resources across different regions or accounts
+# - Enables more complex multi-cloud setups
+provider "aws" {
+  alias  = "west"
+  region = "us-west-2"
+}
+
+resource "aws_instance" "example" {
+  provider = aws.west
+  # ... other configuration ...
+}
+
+# 6. provisioner
+# Use cases:
+# - Executing scripts on local or remote machines
+# - Performing additional setup after resource creation
+# Benefits:
+# - Allows for custom configuration beyond what Terraform providers offer
+# - Useful for complex setup procedures
+resource "aws_instance" "example" {
+  # ... other configuration ...
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get install -y nginx"
+    ]
+  }
+}
+
+# 7. connection
+# Use cases:
+# - Specifying how to connect to a resource for provisioners
+# - Customizing connection details for remote execution
+# Benefits:
+# - Provides flexibility in how Terraform connects to resources
+# - Allows for secure, customized connections
+resource "aws_instance" "example" {
+  # ... other configuration ...
+
+  provisioner "remote-exec" {
+    inline = ["echo Hello World"]
+
+    connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("~/.ssh/id_rsa")
+      host        = self.public_ip
+    }
+  }
+}
+
+# 8. timeouts
+# Use cases:
+# - Customizing how long Terraform waits for operations to complete
+# - Handling resources that take a long time to create, update, or delete
+# Benefits:
+# - Prevents premature timeout errors for slow operations
+# - Allows fine-tuning of Terraform's timing expectations
+resource "aws_db_instance" "example" {
+  # ... other configuration ...
+
+  timeouts {
+    create = "60m"
+    delete = "2h"
+  }
+}

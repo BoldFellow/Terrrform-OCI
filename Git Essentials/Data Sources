@@ -1,0 +1,158 @@
+# 1. AWS AMI Data Source
+# Use cases: 
+# - Fetching the latest AMI ID for a specific OS
+# - Ensuring consistent AMI usage across resources
+# Benefits:
+# - Keeps configurations up-to-date with latest AMIs
+# - Reduces hard-coding of AMI IDs
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+  }
+}
+
+resource "aws_instance" "example" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t3.micro"
+}
+
+# 2. Azure Resource Group Data Source
+# Use cases:
+# - Referencing existing resource groups
+# - Fetching details of resource groups created outside Terraform
+# Benefits:
+# - Enables working with pre-existing Azure resources
+# - Facilitates hybrid management scenarios
+data "azurerm_resource_group" "example" {
+  name = "existing-resource-group"
+}
+
+resource "azurerm_virtual_network" "example" {
+  name                = "example-network"
+  address_space       = ["10.0.0.0/16"]
+  location            = data.azurerm_resource_group.example.location
+  resource_group_name = data.azurerm_resource_group.example.name
+}
+
+# 3. Google Cloud Compute Image Data Source
+# Use cases:
+# - Fetching the latest image for a GCP project
+# - Ensuring consistent image usage across resources
+# Benefits:
+# - Keeps configurations up-to-date with latest images
+# - Simplifies image management in multi-project setups
+data "google_compute_image" "ubuntu" {
+  family  = "ubuntu-2004-lts"
+  project = "ubuntu-os-cloud"
+}
+
+resource "google_compute_instance" "example" {
+  name         = "example-instance"
+  machine_type = "e2-medium"
+  zone         = "us-central1-a"
+
+  boot_disk {
+    initialize_params {
+      image = data.google_compute_image.ubuntu.self_link
+    }
+  }
+}
+
+# 4. Template File Data Source
+# Use cases:
+# - Generating configuration files dynamically
+# - Customizing startup scripts for instances
+# Benefits:
+# - Allows for dynamic content in static files
+# - Enhances reusability of configurations
+data "template_file" "init" {
+  template = file("${path.module}/init.tpl")
+
+  vars = {
+    consul_address = "${aws_instance.consul.private_ip}"
+  }
+}
+
+resource "aws_instance" "web" {
+  # ... other configuration ...
+  user_data = data.template_file.init.rendered
+}
+
+# 5. Terraform Remote State Data Source
+# Use cases:
+# - Fetching outputs from other Terraform states
+# - Connecting multiple Terraform configurations
+# Benefits:
+# - Enables modular Terraform configurations
+# - Facilitates separation of concerns in large projects
+data "terraform_remote_state" "vpc" {
+  backend = "s3"
+  config = {
+    bucket = "terraform-state-prod"
+    key    = "network/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+resource "aws_instance" "example" {
+  # ... other configuration ...
+  subnet_id = data.terraform_remote_state.vpc.outputs.subnet_id
+}
+
+# 6. External Data Source
+# Use cases:
+# - Integrating external scripts or APIs
+# - Performing complex computations outside Terraform
+# Benefits:
+# - Extends Terraform's capabilities with custom logic
+# - Allows integration with existing tools and processes
+data "external" "example" {
+  program = ["python", "${path.module}/example-script.py"]
+
+  query = {
+    # query arguments
+  }
+}
+
+resource "aws_sns_topic" "example" {
+  name = data.external.example.result["name"]
+}
+
+# 7. DNS Data Source
+# Use cases:
+# - Looking up DNS records
+# - Integrating with existing DNS configurations
+# Benefits:
+# - Allows Terraform to work with existing DNS setups
+# - Useful for name resolution in complex network setups
+data "dns_a_record_set" "example" {
+  host = "example.com"
+}
+
+resource "aws_route53_record" "example" {
+  # ... other configuration ...
+  records = data.dns_a_record_set.example.addrs
+}
+
+# 8. HTTP Data Source
+# Use cases:
+# - Fetching data from web APIs
+# - Integrating with external HTTP services
+# Benefits:
+# - Allows Terraform to interact with web services
+# - Useful for dynamic configuration based on external data
+data "http" "example" {
+  url = "https://checkpoint-api.hashicorp.com/v1/check/terraform"
+
+  request_headers = {
+    Accept = "application/json"
+  }
+}
+
+locals {
+  latest_version = jsondecode(data.http.example.body).current_version
+}

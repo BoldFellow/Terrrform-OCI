@@ -1,0 +1,104 @@
+# 1. toset()
+# Use: Converts a list to a set, removing duplicates
+# Common uses: With for_each to create unique resources
+variable "user_names" {
+  default = ["alice", "bob", "alice", "charlie"]
+}
+
+resource "aws_iam_user" "example" {
+  for_each = toset(var.user_names)
+  name     = each.key
+}
+
+# 2. jsonencode()
+# Use: Encodes a given value to a JSON string
+# Common uses: Creating JSON policy documents
+resource "aws_iam_policy" "example" {
+  name = "example_policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ec2:Describe*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# 3. length()
+# Use: Returns the length of a given list, map, or string
+# Common uses: Conditional resource creation, validation
+resource "aws_instance" "example" {
+  count = length(var.subnet_ids) > 0 ? 1 : 0
+  # ... other configuration ...
+}
+
+# 4. element()
+# Use: Retrieves a single element from a list
+# Common uses: Cycling through a list of values
+resource "aws_instance" "example" {
+  count         = 3
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = element(["t2.micro", "t2.small", "t2.medium"], count.index)
+}
+
+# 5. lookup()
+# Use: Retrieves the value of a single element from a map
+# Common uses: Selecting values based on a key
+variable "instance_types" {
+  default = {
+    dev  = "t2.micro"
+    prod = "t2.small"
+  }
+}
+
+resource "aws_instance" "example" {
+  instance_type = lookup(var.instance_types, var.environment, "t2.micro")
+  # ... other configuration ...
+}
+
+# 6. format()
+# Use: Formats a string according to a specification
+# Common uses: Creating standardized resource names
+resource "aws_s3_bucket" "example" {
+  bucket = format("my-bucket-%s-%s", var.environment, var.project_name)
+}
+
+# 7. coalesce()
+# Use: Returns the first non-null value in a list
+# Common uses: Providing fallback values
+resource "aws_instance" "example" {
+  instance_type = coalesce(var.instance_type, "t2.micro")
+  # ... other configuration ...
+}
+
+# 8. merge()
+# Use: Merges two or more maps
+# Common uses: Combining sets of tags or attributes
+locals {
+  common_tags = {
+    Environment = var.environment
+    Project     = var.project_name
+  }
+  resource_tags = {
+    Name = "example-resource"
+  }
+}
+
+resource "aws_instance" "example" {
+  # ... other configuration ...
+  tags = merge(local.common_tags, local.resource_tags)
+}
+
+# 9. cidrsubnet()
+# Use: Calculates a subnet address within a given IP network address prefix
+# Common uses: Automatically calculating subnet ranges
+resource "aws_subnet" "example" {
+  count      = 3
+  vpc_id     = aws_vpc.main.id
+  cidr_block = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
+}

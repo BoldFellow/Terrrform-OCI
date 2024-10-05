@@ -1,0 +1,214 @@
+# 1. String
+# Use cases: 
+# - Resource naming
+# - Specifying unique identifiers (e.g., AMI IDs, ARNs)
+# - Configuring text-based settings
+# Benefits:
+# - Simple and intuitive
+# - Easy to validate and manipulate
+# - Compatible with most resource attributes
+variable "instance_name" {
+  type        = string
+  description = "Name of the EC2 instance"
+  default     = "my-instance"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+  tags = {
+    Name = var.instance_name
+  }
+}
+
+# 2. Number
+# Use cases:
+# - Specifying counts or quantities
+# - Defining sizes or capacities
+# - Setting numeric thresholds or limits
+# Benefits:
+# - Allows mathematical operations
+# - Easy to increment/decrement
+# - Can be used in conditional expressions
+variable "instance_count" {
+  type        = number
+  description = "Number of instances to create"
+  default     = 2
+}
+
+resource "aws_instance" "example" {
+  count         = var.instance_count
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+}
+
+# 3. Boolean
+# Use cases:
+# - Toggling features on/off
+# - Conditional resource creation
+# - Enabling/disabling configuration options
+# Benefits:
+# - Simple logic control
+# - Easy to use in conditional expressions
+# - Clear and unambiguous
+variable "enable_public_ip" {
+  type        = bool
+  description = "Whether to assign a public IP to the instance"
+  default     = true
+}
+
+resource "aws_instance" "example" {
+  ami               = "ami-0c55b159cbfafe1f0"
+  instance_type     = "t2.micro"
+  associate_public_ip_address = var.enable_public_ip
+}
+
+# 4. List
+# Use cases:
+# - Specifying multiple subnets, security groups, or AZs
+# - Defining lists of allowed values
+# - Iterating over multiple similar resources
+# Benefits:
+# - Ordered collection of values
+# - Easy to append or prepend values
+# - Can be used with count and for_each for dynamic resource creation
+variable "subnet_ids" {
+  type        = list(string)
+  description = "List of subnet IDs"
+  default     = ["subnet-12345678", "subnet-87654321"]
+}
+
+resource "aws_lb" "example" {
+  name               = "example-lb"
+  internal           = false
+  load_balancer_type = "application"
+  subnets            = var.subnet_ids
+}
+
+# 5. Map
+# Use cases:
+# - Defining key-value pairs like tags
+# - Creating lookup tables for configurations
+# - Grouping related settings
+# Benefits:
+# - Allows for dynamic lookups
+# - Easy to merge or update
+# - Provides a clear structure for related data
+variable "tags" {
+  type = map(string)
+  description = "Tags to apply to resources"
+  default = {
+    Environment = "Production"
+    Project     = "ExampleProject"
+  }
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+  tags          = var.tags
+}
+
+# 6. Set
+# Use cases:
+# - Ensuring unique values (e.g., open ports, unique names)
+# - Defining allowed values without duplicates
+# - Merging multiple lists without duplicates
+# Benefits:
+# - Guarantees uniqueness of elements
+# - Efficient for membership testing
+# - Useful for de-duplication
+variable "allowed_ports" {
+  type        = set(number)
+  description = "Set of allowed ports"
+  default     = [22, 80, 443]
+}
+
+resource "aws_security_group" "example" {
+  name        = "example-sg"
+  description = "Example security group"
+
+  dynamic "ingress" {
+    for_each = var.allowed_ports
+    content {
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+}
+
+# 7. Object
+# Use cases:
+# - Grouping related attributes for a resource
+# - Defining complex data structures
+# - Creating reusable configuration objects
+# Benefits:
+# - Provides structure to related data
+# - Allows for complex nested configurations
+# - Improves code organization and readability
+variable "instance_settings" {
+  type = object({
+    ami           = string
+    instance_type = string
+    tags          = map(string)
+  })
+  description = "Settings for EC2 instance"
+  default = {
+    ami           = "ami-0c55b159cbfafe1f0"
+    instance_type = "t2.micro"
+    tags = {
+      Name = "ExampleInstance"
+    }
+  }
+}
+
+resource "aws_instance" "example" {
+  ami           = var.instance_settings.ami
+  instance_type = var.instance_settings.instance_type
+  tags          = var.instance_settings.tags
+}
+
+# 8. Tuple
+# Use cases:
+# - Defining fixed-length lists with mixed types
+# - Representing structured data where order matters
+# - Creating immutable lists of values
+# Benefits:
+# - Allows for mixed types in a single collection
+# - Provides type safety for fixed-structure data
+# - Useful for passing multiple related values as a single unit
+variable "instance_properties" {
+  type        = tuple([string, number, bool])
+  description = "Properties of the instance: [instance_type, count, public_ip]"
+  default     = ["t2.micro", 1, true]
+}
+
+resource "aws_instance" "example" {
+  count                       = var.instance_properties[1]
+  ami                         = "ami-0c55b159cbfafe1f0"
+  instance_type               = var.instance_properties[0]
+  associate_public_ip_address = var.instance_properties[2]
+}
+
+# 9. Any
+# Use cases:
+# - Accepting user-defined data of unknown structure
+# - Allowing flexibility in input types
+# - Passing through complex data structures
+# Benefits:
+# - Maximum flexibility for input types
+# - Useful for modules that need to handle various data types
+# - Can be used as a placeholder for future type definitions
+variable "custom_data" {
+  type        = any
+  description = "Any type of data"
+  default     = null
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+  user_data     = var.custom_data != null ? jsonencode(var.custom_data) : null
+}

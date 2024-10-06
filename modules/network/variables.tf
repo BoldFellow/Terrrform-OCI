@@ -22,3 +22,9 @@ variable "subnets" {
   default     = {}
   
 }
+
+variable "network_security_group_display_name" {
+    type = string
+    description = "name of the network security group"
+  
+}

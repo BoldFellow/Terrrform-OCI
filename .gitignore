@@ -5,6 +5,8 @@
 *.tfstate
 *.tfstate.*
 
+providers.tf
+
 # Ignore provider binary directory
 **/.terraform/providers/**
 
@@ -14,3 +16,10 @@
 # Ignore CLI configuration files
 .terraformrc
 erraform.rc
+
+# visual code
+**/.vscode/*
+
+# macOS related files
+**/.DS_Store
+.terraform.lock.hcl
